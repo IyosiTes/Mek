@@ -1,0 +1,18 @@
+# Ignore virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Django database
+db.sqlite3
+
+# Environment variables
+.env
+
+# VS Code settings
+.vscode/

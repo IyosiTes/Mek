@@ -23,6 +23,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     #Products API
     path("api/", include("catalog.urls")),
+    #Cart API
+    path("api/cart/", include("cart.urls")),
 ]
 
 if settings.DEBUG: urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) 

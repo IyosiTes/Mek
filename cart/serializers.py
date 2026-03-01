@@ -29,3 +29,7 @@ class CartSerializer(serializers.ModelSerializer):
 
     def get_total_price(self, obj):
         return obj.total_price
+    
+class UpdateCartItemSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)    

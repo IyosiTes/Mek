@@ -7,7 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 
 from .models import Cart, CartItem
-from .serializers import CartSerializer
+from rest_framework import status
+from .serializers import CartSerializer, UpdateCartItemSerializer
 from catalog.models import Product
 
 
@@ -46,6 +47,35 @@ class AddToCartView(APIView):
         item.save()
 
         return Response({"success": True})
+    
+
+    #adding update cart item view
+
+class UpdateCartItemView(APIView):
+     permission_classes = [IsAuthenticated]
+
+     def patch(self, request):
+        serializer = UpdateCartItemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        item_id = serializer.validated_data["item_id"]
+        quantity = serializer.validated_data["quantity"]
+
+        try:
+            cart_item = CartItem.objects.get(
+                id=item_id,
+                cart__user=request.user
+            )
+        except CartItem.DoesNotExist:
+            return Response(
+                {"detail": "Cart item not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        cart_item.quantity = quantity
+        cart_item.save()
+
+        return Response({"detail": "Quantity updated successfully"})
 
 
 class RemoveFromCartView(APIView):

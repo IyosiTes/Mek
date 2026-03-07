@@ -95,7 +95,7 @@ class RemoveFromCartView(APIView):
         product_id = request.data.get("product_id")
 
        # cart = get_object_or_404(Cart, user=request.user)
-        cart = get_object_or_404(cart, user=get_dev_user())
+        cart = get_object_or_404(Cart, user=get_dev_user())
         CartItem.objects.filter(cart=cart, product_id=product_id).delete()
 
         return Response({"success": True})
@@ -105,7 +105,7 @@ class ClearCartView(APIView):
     permission_classes = []
 
     def post(self, request):
-        cart = get_object_or_404(cart, user=get_dev_user())
+        cart = get_object_or_404(Cart, user=get_dev_user())
         #cart = get_object_or_404(Cart, user=request.user)
         cart.items.all().delete()
         return Response({"success": True})

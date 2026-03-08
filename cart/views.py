@@ -1,6 +1,5 @@
 #from django.shortcuts import render
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
+
 from django.contrib.auth import get_user_model
 # Create your views here.
 from rest_framework.views import APIView
@@ -17,7 +16,7 @@ User = get_user_model()
 def get_dev_user():
     user, _ = User.objects.get_or_create(username="dev")
     return user
-@method_decorator(csrf_exempt, name="dispatch")
+
 class CartView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -28,7 +27,7 @@ class CartView(APIView):
         serializer = CartSerializer(cart)
         return Response(serializer.data)
 
-@method_decorator(csrf_exempt, name="dispatch")
+
 class AddToCartView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -59,7 +58,7 @@ class AddToCartView(APIView):
     
 
     #adding update cart item view
-@method_decorator(csrf_exempt, name="dispatch")
+
 class UpdateCartItemView(APIView):
      permission_classes = [IsAuthenticated]
 
@@ -87,7 +86,7 @@ class UpdateCartItemView(APIView):
 
         return Response({"detail": "Quantity updated successfully"})
 
-@method_decorator(csrf_exempt, name="dispatch")
+
 class RemoveFromCartView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -100,7 +99,7 @@ class RemoveFromCartView(APIView):
 
         return Response({"success": True})
 
-@method_decorator(csrf_exempt, name="dispatch")
+
 class ClearCartView(APIView):
     permission_classes = [IsAuthenticated]
 

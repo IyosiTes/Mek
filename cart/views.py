@@ -22,7 +22,7 @@ class CartView(APIView):
 
     def get(self, request):
         cart, _ = Cart.objects.get_or_create(user=request.user)
-        user = get_dev_user()
+        #user = get_dev_user()
        # cart, _ = Cart.objects.get_or_create(user=user)
         serializer = CartSerializer(cart)
         return Response(serializer.data)

@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 
 from .models import Cart, CartItem
 from rest_framework import status
-from .serializers import CartSerializer, UpdateCartItemSerializer
+from .serializers import CartSerializer, MergeCartSerializer, UpdateCartItemSerializer
 from catalog.models import Product
 
 User = get_user_model()
@@ -108,3 +108,32 @@ class ClearCartView(APIView):
         cart = get_object_or_404(Cart, user=request.user)
         cart.items.all().delete()
         return Response({"success": True})
+
+# cart/views.py
+class MergeCartView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = MergeCartSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        cart, _ = Cart.objects.get_or_create(user=request.user)
+
+        for item_data in serializer.validated_data["items"]:
+            product_id = item_data["product_id"]
+            quantity = item_data["quantity"]
+
+            product = get_object_or_404(Product, id=product_id)
+
+            cart_item, created = CartItem.objects.get_or_create(
+                cart=cart, product=product
+            )
+            if not created:
+                cart_item.quantity += quantity
+            else:
+                cart_item.quantity = quantity
+
+            cart_item.save()
+
+        # Return updated cart
+        return Response(CartSerializer(cart).data)        

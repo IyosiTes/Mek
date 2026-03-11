@@ -33,3 +33,12 @@ class CartSerializer(serializers.ModelSerializer):
 class UpdateCartItemSerializer(serializers.Serializer):
     item_id = serializers.IntegerField()
     quantity = serializers.IntegerField(min_value=1)    
+
+
+
+class MergeCartItemSerializer(serializers.Serializer):
+    product_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
+
+class MergeCartSerializer(serializers.Serializer):
+    items = MergeCartItemSerializer(many=True)    

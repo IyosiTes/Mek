@@ -24,5 +24,3 @@ class RegisterView(APIView):
                 {"message": "User created successfully"},
                 status=status.HTTP_201_CREATED
             )
-
-   

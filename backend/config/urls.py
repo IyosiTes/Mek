@@ -29,12 +29,19 @@ urlpatterns = [
     path("api/", include("catalog.urls")),
     #Cart API
     path("api/cart/", include("cart.urls")),
+
     #JWT login and refresh endpoints
     path("api/auth/login/", TokenObtainPairView.as_view(), name="login"),
     path("api/auth/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    #user endpoint
-     path("api/", include("accounts.urls")),
-]
+
+    #user endpointpath("api/auth/", include("
+    path("api/auth/", include("accounts.urls")),
+
+    #orders endpoint
+    path("api/orders/", include("orders.urls")),
+
+    ]
+
 
 
 if settings.DEBUG: urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) 

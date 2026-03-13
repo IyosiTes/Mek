@@ -5,12 +5,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
+from rest_framework.generics import RetrieveAPIView
 
 from cart.models import CartItem
 from catalog.models import Product
 
 from .models import Order, OrderItem
-from .serializers import CreateOrderSerializer
+from .serializers import CreateOrderSerializer, OrderSerializer
 
 
 class CreateOrderView(APIView):
@@ -72,3 +73,9 @@ class CreateOrderView(APIView):
                 "payment_method": payment_method
             }
         )
+class OrderDetailView(RetrieveAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user)

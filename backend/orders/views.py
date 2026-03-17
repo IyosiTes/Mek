@@ -7,6 +7,8 @@ from rest_framework import status
 from cart.models import CartItem
 from .models import Order, OrderItem
 from .serializers import CreateOrderSerializer, OrderSerializer
+import uuid
+
 
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]
@@ -18,7 +20,7 @@ class CreateOrderView(APIView):
 
         user = request.user
         payment_method = serializer.validated_data["payment_method"]
-        delivery_address = serializer.validated_data["delivery_address"]
+    
 
         cart_items = CartItem.objects.filter(cart__user=user)
         if not cart_items.exists():
@@ -26,44 +28,54 @@ class CreateOrderView(APIView):
 
         total = 0
         for item in cart_items:
-            if not item.product:
-                return Response(
-                    {"error": f"A product in cart no longer exists"},
-                    status=400
-                )
             if item.quantity > item.product.stock:
                 return Response(
-                    {"error": f"{item.product.name} out of stock"},
-                    status=400
+                    {"error": f"{item.product.name} out of stock"}, status=400
                 )
             total += item.total_price
+
+        #  Generate order code
+        order_code = f"ETH-{uuid.uuid4().hex[:6].upper()}"
 
         # Create order
         order = Order.objects.create(
             user=user,
+            order_code=order_code,
+            full_name=user.username,
+            phone_number=user.phone_number,
+
+            city=serializer.validated_data["city"],
+            area=serializer.validated_data["area"],
+            address_details=serializer.validated_data["address_details"],
+
             total_amount=total,
             payment_method=payment_method,
-            delivery_address=delivery_address,
         )
 
-        # Create order items and update stock
+        #  Create order items
         for item in cart_items:
             OrderItem.objects.create(
                 order=order,
                 product=item.product,
                 quantity=item.quantity,
-                price=item.product.price
+                price=item.product.price,
             )
+
+            # reduce stock
             item.product.stock -= item.quantity
             item.product.save()
 
         cart_items.delete()
 
-        return Response({
-            "order_id": order.id,
-            "payment_method": order.payment_method
-        }, status=201)
-
+        return Response(
+            {
+                "order_id": order.id,
+                "order_code": order.order_code,
+                "payment_method": order.payment_method,
+            },
+            status=201,
+        )
+       
 
 class OrderDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]

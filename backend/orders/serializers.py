@@ -5,7 +5,9 @@ class CreateOrderSerializer(serializers.ModelSerializer):
     payment_method = serializers.ChoiceField(
         choices=["cod", "telebirr"]
     )
-    delivery_address = serializers.CharField(max_length = 200)
+    city = serializers.CharField(max_length=100)
+    area = serializers.CharField(max_length=255)
+    address_details = serializers.CharField()
     class Meta:
         model = Order
         fields = ["payment_method", "delivery_address"]
@@ -30,4 +32,5 @@ class OrderSerializer(serializers.ModelSerializer):
             "total_amount",
             "status",
             "items",
+            "created_at",
         ] 

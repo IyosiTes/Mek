@@ -14,6 +14,7 @@ class Order(models.Model):
 
     PAYMENT_STATUS = [
         ("unpaid", "Unpaid"),
+        ("submitted", "payment Submitted"),
         ("paid", "Paid"),
     ]
 
@@ -23,6 +24,16 @@ class Order(models.Model):
     ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    order_code = models.CharField(max_length=20, unique=True)
+
+    full_name = models.CharField(max_length=255)
+    phone_number = models.CharField(max_length=20)
+
+    #  NEW: structured address
+    city = models.CharField(max_length=100)
+    area = models.CharField(max_length=255)
+    address_details = models.TextField()
 
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="pending")
 
@@ -34,10 +45,11 @@ class Order(models.Model):
 
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD)
 
+   
+    #  NEW: Telebirr support
+    transaction_id = models.CharField(max_length=100, blank=True, null=True)
+    payment_screenshot = models.ImageField(upload_to="payments/", blank=True, null=True)
     total_amount = models.DecimalField(max_digits=10, decimal_places=2)
-
-    delivery_address = models.TextField()
-
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

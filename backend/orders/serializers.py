@@ -34,3 +34,7 @@ class OrderSerializer(serializers.ModelSerializer):
             "items",
             "created_at",
         ] 
+
+class TelebirrPaymentSerializer(serializers.Serializer):
+    transaction_id = serializers.CharField(max_length ="20")     
+    payment_screenshot= serializers.ImageField()   

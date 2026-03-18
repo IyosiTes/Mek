@@ -6,8 +6,9 @@ from rest_framework import status
 
 from cart.models import CartItem
 from .models import Order, OrderItem
-from .serializers import CreateOrderSerializer, OrderSerializer
+from .serializers import CreateOrderSerializer, OrderSerializer, TelebirrPaymentSerializer
 import uuid
+from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class CreateOrderView(APIView):
@@ -83,3 +84,28 @@ class OrderDetailView(RetrieveAPIView):
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
+    
+class SubmitTelebirrPaymentView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, order_id):
+        try:
+            order = Order.objects.get(id=order_id, user=request.user)
+        except Order.DoesNotExist:
+            return Response({"error": "Order not found"}, status=404)
+
+        if order.payment_method != "telebirr":
+            return Response({"error": "Invalid payment method"}, status=400)
+
+        serializer = TelebirrPaymentSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+
+        order.transaction_id = serializer.validated_data["transaction_id"]
+        order.payment_screenshot = serializer.validated_data["payment_screenshot"]
+        order.payment_status = "submitted"
+        order.save()
+
+        return Response({"message": "Payment submitted successfully"})    

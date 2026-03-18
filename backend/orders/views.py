@@ -21,24 +21,35 @@ class CreateOrderView(APIView):
 
         user = request.user
         payment_method = serializer.validated_data["payment_method"]
-    
 
         cart_items = CartItem.objects.filter(cart__user=user)
         if not cart_items.exists():
             return Response({"error": "Cart is empty"}, status=400)
 
         total = 0
+
+        #  FIXED PART (INSIDE FUNCTION)
         for item in cart_items:
-            if item.quantity > item.product.stock:
+            try:
+                product_stock = int(item.product.stock)
+            except (ValueError, TypeError):
                 return Response(
-                    {"error": f"{item.product.name} out of stock"}, status=400
+                    {"error": f"Invalid stock for {item.product.name}"},
+                    status=400
                 )
+
+            if item.quantity > product_stock:
+                return Response(
+                    {"error": f"{item.product.name} out of stock"},
+                    status=400
+                )
+
             total += item.total_price
 
         #  Generate order code
         order_code = f"ETH-{uuid.uuid4().hex[:6].upper()}"
 
-        # Create order
+        #  Create order
         order = Order.objects.create(
             user=user,
             order_code=order_code,
@@ -62,8 +73,8 @@ class CreateOrderView(APIView):
                 price=item.product.price,
             )
 
-            # reduce stock
-            item.product.stock -= item.quantity
+            #  FIX STOCK UPDATE
+            item.product.stock = int(item.product.stock) - item.quantity
             item.product.save()
 
         cart_items.delete()
@@ -76,7 +87,6 @@ class CreateOrderView(APIView):
             },
             status=201,
         )
-       
 
 class OrderDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]

@@ -1,16 +1,14 @@
 from rest_framework import serializers
 from .models import Order, OrderItem
 
-class CreateOrderSerializer(serializers.ModelSerializer):
+class CreateOrderSerializer(serializers.Serializer):
     payment_method = serializers.ChoiceField(
         choices=["cod", "telebirr"]
     )
     city = serializers.CharField(max_length=100)
     area = serializers.CharField(max_length=255)
     address_details = serializers.CharField()
-    class Meta:
-        model = Order
-        fields = ["payment_method", "delivery_address"]
+    
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name")
@@ -36,5 +34,5 @@ class OrderSerializer(serializers.ModelSerializer):
         ] 
 
 class TelebirrPaymentSerializer(serializers.Serializer):
-    transaction_id = serializers.CharField(max_length ="20")     
+    transaction_id = serializers.CharField(max_length =20)     
     payment_screenshot= serializers.ImageField()   

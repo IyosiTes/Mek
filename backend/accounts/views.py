@@ -33,3 +33,22 @@ class RegisterView(APIView):
                 {"message": "User created successfully"},
                 status=status.HTTP_201_CREATED
             )
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        user =request.user
+        return Response({
+            "username": user.username,
+            "phone_number": user.phone_number,
+            "address": user.address,
+        }) 
+    
+class UpdateProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    def patch(self, request):
+        user = request.user
+        return Response({
+            "username": user.username,
+            "phone_number": user.phone_number,
+            "address": user.address,
+        })

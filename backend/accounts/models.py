@@ -6,7 +6,7 @@ class User(AbstractUser):
     # Extra fields beyond Django's default
     phone_number = models.CharField(max_length=20, blank=False, null=False)
     church_affiliation = models.CharField(max_length=200, blank=True, null=True)
-    address = models.CharField(max_length=255, blank=True, null=False)
+    address = models.CharField(max_length=255, blank=True, null=True)
 
     # Vendor flag (you control this in admin)
     is_vendor = models.BooleanField(default=False)

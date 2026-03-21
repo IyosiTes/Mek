@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import RetrieveAPIView
+from rest_framework.generics import RetrieveAPIView,ListAPIView
 from rest_framework import status
 
 from cart.models import CartItem
@@ -118,4 +118,11 @@ class SubmitTelebirrPaymentView(APIView):
         order.payment_status = "submitted"
         order.save()
 
-        return Response({"message": "Payment submitted successfully"})    
+        return Response({"message": "Payment submitted successfully"})  
+
+class UserOrdersView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        return Order.objects.filter(user=self.request.user).order_by("-created_at")      

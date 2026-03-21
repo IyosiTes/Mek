@@ -10,6 +10,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = [
             "username",
             "phone_number",
+            "address",
             "password",
             "password_confirm",
         ]
@@ -28,6 +29,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         user = User.objects.create_user(
             username=validated_data["username"],
+            address=validated_data["address"],
             phone_number=validated_data["phone_number"],
             password=validated_data["password"],
         )

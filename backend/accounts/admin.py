@@ -6,6 +6,7 @@ from .models import User
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     # Add your custom fields to the default Django UserAdmin
+    ordering = ( "-id",)
     fieldsets = BaseUserAdmin.fieldsets + (
         ("Extra Info", {
             "fields": (
@@ -35,7 +36,6 @@ class UserAdmin(BaseUserAdmin):
     # Enable searching by these fields
     search_fields = (
         "username",
-        "email",
         "phone_number",
         "church_affiliation",
         "address",
@@ -44,11 +44,10 @@ class UserAdmin(BaseUserAdmin):
     # Add filters in the right sidebar
     list_filter = (
         "is_vendor",
-        "preferred_payment",
         "is_staff",
         "is_superuser",
     )
-    from django.contrib import admin
+   
 
 admin.site.site_header = "Mekurab Admin"
 admin.site.site_title = "Mekurab Admin Portal"

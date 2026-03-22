@@ -76,7 +76,7 @@ class ForgotPasswordView(APIView):
             expires_at=timezone.now() + timedelta(minutes=15)
         )
 
-        reset_link = f"http://localhost:3000/reset-password?token={token.token}"
+        reset_link = f"http://localhost:5173/reset-password?token={token.token}"
 
         send_mail(
             subject="Password Reset",

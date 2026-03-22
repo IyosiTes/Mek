@@ -2,6 +2,11 @@ from django.shortcuts import render
 from rest_framework.views import APIView, Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from django.utils import timezone
+from datetime import timedelta
+from django.core.mail import send_mail
+from .models import User, PasswordResetToken
+from django.contrib.auth.hashers import make_password
 
 from accounts.serializers import RegisterSerializer,UserSerializer
 # Create your views here.
@@ -54,3 +59,51 @@ class UpdateProfileView(APIView):
             "phone_number": user.phone_number,
             "address": user.address,
         })
+
+class ForgotPasswordView(APIView):
+       def post(self, request):
+        email = request.data.get("email")
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response({
+                "message": "If this email exists, a reset link was sent"
+            })
+
+        token = PasswordResetToken.objects.create(
+            user=user,
+            expires_at=timezone.now() + timedelta(minutes=15)
+        )
+
+        reset_link = f"http://localhost:3000/reset-password?token={token.token}"
+
+        send_mail(
+            subject="Password Reset",
+            message=f"Click to reset: {reset_link}",
+            from_email="noreply@yourapp.com",
+            recipient_list=[email],
+        )
+
+        return Response({"message": "Reset link sent"})    
+
+class ResetPasswordView(APIView):
+    def post(self, request):
+        token = request.data.get("token")
+        new_password = request.data.get("password")
+
+        try:
+            reset_obj = PasswordResetToken.objects.get(token=token)
+        except PasswordResetToken.DoesNotExist:
+            return Response({"error": "Invalid token"}, status=400)
+
+        if not reset_obj.is_valid():
+            return Response({"error": "Token expired"}, status=400)
+
+        user = reset_obj.user
+        user.password = make_password(new_password)
+        user.save()
+
+        reset_obj.delete()  # 👈 important
+
+        return Response({"message": "Password reset successful"})

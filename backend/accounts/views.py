@@ -33,6 +33,8 @@ class RegisterView(APIView):
                 {"message": "User created successfully"},
                 status=status.HTTP_201_CREATED
             )
+        else:
+           return Response(serializer.errors, status=400)
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):

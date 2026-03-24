@@ -41,7 +41,7 @@ class AddToCartView(APIView):
             return Response({"error": "Not enough stock"}, status=400)
 
         cart, _ = Cart.objects.get_or_create(user=request.user)
-        user = get_dev_user()
+       
        # cart, _ = Cart.objects.get_or_create(user=user)
         item, created = CartItem.objects.get_or_create(
             cart=cart, product=product

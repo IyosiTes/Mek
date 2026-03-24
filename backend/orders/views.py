@@ -53,8 +53,8 @@ class CreateOrderView(APIView):
         order = Order.objects.create(
             user=user,
             order_code=order_code,
-            full_name=user.username,
-            phone_number=user.phone_number,
+            full_name= user.username,
+            phone_number=serializer.validated_data.get("phone_number", user.phone_number),
 
             city=serializer.validated_data["city"],
             area=serializer.validated_data["area"],

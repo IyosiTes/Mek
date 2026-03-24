@@ -8,7 +8,7 @@ class CreateOrderSerializer(serializers.Serializer):
     city = serializers.CharField(max_length=100)
     area = serializers.CharField(max_length=255)
     address_details = serializers.CharField()
-    
+    phone_number = serializers.CharField(max_length=20)  
 
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name")

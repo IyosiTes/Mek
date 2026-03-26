@@ -18,6 +18,10 @@ class OrderAdmin(admin.ModelAdmin):
         "id",
         "order_code",
         "user",
+        "phone_number",
+        "city",
+        "area",
+        "address_details",
         "payment_method",
         "payment_status",
         "status",
@@ -28,7 +32,7 @@ class OrderAdmin(admin.ModelAdmin):
 
     list_filter = ("payment_method", "payment_status", "status", "created_at")
 
-    search_fields = ("order_code", "user__username", "phone_number", "transaction_id")
+    search_fields = ( "user__username", "phone_number", "city", "area",)
 
     ordering = ("-created_at",)
 

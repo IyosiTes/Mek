@@ -9,7 +9,8 @@ class CreateOrderSerializer(serializers.Serializer):
     area = serializers.CharField(max_length=255)
     address_details = serializers.CharField()
     phone_number = serializers.CharField(max_length=20)  
-
+    payment_screenshot = serializers.ImageField(required=False)
+    transaction_id = serializers.CharField(required=False, allow_blank=True)
 class OrderItemSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name")
 
@@ -33,6 +34,3 @@ class OrderSerializer(serializers.ModelSerializer):
             "created_at",
         ] 
 
-class TelebirrPaymentSerializer(serializers.Serializer):
-    transaction_id = serializers.CharField(max_length =20)     
-    payment_screenshot= serializers.ImageField()   

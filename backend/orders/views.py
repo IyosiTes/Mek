@@ -1,19 +1,18 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import RetrieveAPIView,ListAPIView
+from rest_framework.generics import RetrieveAPIView, ListAPIView
 from rest_framework import status
-
+import uuid
 from cart.models import CartItem
 from .models import Order, OrderItem
-from .serializers import CreateOrderSerializer, OrderSerializer, TelebirrPaymentSerializer
-import uuid
+from .serializers import CreateOrderSerializer, OrderSerializer
 from rest_framework.parsers import MultiPartParser, FormParser
 
 
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]
-
+    parser_classes = [MultiPartParser, FormParser]  
     def post(self, request):
         serializer = CreateOrderSerializer(data=request.data)
         if not serializer.is_valid():
@@ -28,7 +27,7 @@ class CreateOrderView(APIView):
 
         total = 0
 
-        #  FIXED PART (INSIDE FUNCTION)
+        # ✅ STOCK CHECK
         for item in cart_items:
             try:
                 product_stock = int(item.product.stock)
@@ -46,14 +45,21 @@ class CreateOrderView(APIView):
 
             total += item.total_price
 
-        #  Generate order code
+        # ✅ OPTIONAL: validate Telebirr BEFORE creating order
+        if payment_method == "telebirr" and not request.FILES.get("payment_screenshot"):
+            return Response(
+                {"error": "Payment screenshot is required for Telebirr"},
+                status=400
+            )
+
+        # ✅ Generate order code
         order_code = f"ETH-{uuid.uuid4().hex[:6].upper()}"
 
-        #  Create order
+        # ✅ Create order
         order = Order.objects.create(
             user=user,
             order_code=order_code,
-            full_name= user.username,
+            full_name=user.username,
             phone_number=serializer.validated_data.get("phone_number", user.phone_number),
 
             city=serializer.validated_data["city"],
@@ -64,7 +70,17 @@ class CreateOrderView(APIView):
             payment_method=payment_method,
         )
 
-        #  Create order items
+        # ✅ PAYMENT LOGIC
+        if payment_method == "telebirr":
+            order.payment_screenshot = request.FILES.get("payment_screenshot")
+            order.transaction_id = request.data.get("transaction_id", "")
+            order.payment_status = "submitted"  # waiting admin verification
+        else:
+            order.payment_status = "unpaid"  # COD (or use "pending" if you want more accurate logic)
+
+        order.save()
+
+        # ✅ Create order items + update stock
         for item in cart_items:
             OrderItem.objects.create(
                 order=order,
@@ -73,10 +89,10 @@ class CreateOrderView(APIView):
                 price=item.product.price,
             )
 
-            #  FIX STOCK UPDATE
             item.product.stock = int(item.product.stock) - item.quantity
             item.product.save()
 
+        # ✅ Clear cart
         cart_items.delete()
 
         return Response(
@@ -88,41 +104,18 @@ class CreateOrderView(APIView):
             status=201,
         )
 
+
 class OrderDetailView(RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = OrderSerializer
 
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
-    
-class SubmitTelebirrPaymentView(APIView):
-    permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser, FormParser]
 
-    def post(self, request, order_id):
-        try:
-            order = Order.objects.get(id=order_id, user=request.user)
-        except Order.DoesNotExist:
-            return Response({"error": "Order not found"}, status=404)
-
-        if order.payment_method != "telebirr":
-            return Response({"error": "Invalid payment method"}, status=400)
-
-        serializer = TelebirrPaymentSerializer(data=request.data)
-
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=400)
-
-        order.transaction_id = serializer.validated_data["transaction_id"]
-        order.payment_screenshot = serializer.validated_data["payment_screenshot"]
-        order.payment_status = "submitted"
-        order.save()
-
-        return Response({"message": "Payment submitted successfully"})  
 
 class UserOrdersView(ListAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = OrderSerializer
 
     def get_queryset(self):
-        return Order.objects.filter(user=self.request.user).order_by("-created_at")      
+        return Order.objects.filter(user=self.request.user).order_by("-created_at")   

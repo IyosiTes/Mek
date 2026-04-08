@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework.views import APIView, Response
+from rest_framework.views import APIView, Response, settings
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
@@ -76,12 +76,25 @@ class ForgotPasswordView(APIView):
             expires_at=timezone.now() + timedelta(minutes=15)
         )
 
-        reset_link = f"http://localhost:5173/reset-password?token={token.token}"
+        reset_link = f"https://mekwerab.vercel.app/reset-password?token={token.token}"
 
         send_mail(
-            subject="Password Reset",
-            message=f"Click to reset: {reset_link}",
-            from_email="noreply@yourapp.com",
+            subject="Reset Your Password",
+            message=f"""
+            Hello,
+
+            You requested a password reset.
+
+            Click the link below to reset your password:
+                {reset_link} 
+            This link will expire in 15 minutes.
+
+            If you did not request this, please ignore this email.
+
+            Thanks,
+            Mekwerb | ምኵራብ Team
+            """,
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[email],
         )
 
@@ -104,6 +117,6 @@ class ResetPasswordView(APIView):
         user.password = make_password(new_password)
         user.save()
 
-        reset_obj.delete()  # 👈 important
+        reset_obj.delete()  
 
         return Response({"message": "Password reset successful"})

@@ -1,12 +1,15 @@
 from django.shortcuts import render
-from rest_framework.views import APIView, Response, settings
+from rest_framework.views import APIView
+from rest_framework.response import  Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
 from django.core.mail import send_mail
 from .models import User, PasswordResetToken
 from django.contrib.auth.hashers import make_password
+
 
 from accounts.serializers import RegisterSerializer,UserSerializer
 # Create your views here.
@@ -61,6 +64,7 @@ class UpdateProfileView(APIView):
         })
 
 class ForgotPasswordView(APIView):
+       permission_classes = [AllowAny]
        def post(self, request):
         email = request.data.get("email")
 
@@ -101,6 +105,7 @@ class ForgotPasswordView(APIView):
         return Response({"message": "Reset link sent"})    
 
 class ResetPasswordView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         token = request.data.get("token")
         new_password = request.data.get("password")

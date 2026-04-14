@@ -1,3 +1,6 @@
+import email
+import token
+
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import  Response
@@ -64,8 +67,9 @@ class UpdateProfileView(APIView):
         })
 
 class ForgotPasswordView(APIView):
-       permission_classes = [AllowAny]
-       def post(self, request):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
         email = request.data.get("email")
 
         try:
@@ -82,27 +86,18 @@ class ForgotPasswordView(APIView):
 
         reset_link = f"https://mekwerab.vercel.app/reset-password?token={token.token}"
 
-        send_mail(
-            subject="Reset Your Password",
-            message=f"""
-            Hello,
+        try:
+            send_mail(
+                subject="Reset Your Password",
+                message=f"Reset here: {reset_link}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
 
-            You requested a password reset.
-
-            Click the link below to reset your password:
-                {reset_link} 
-            This link will expire in 15 minutes.
-
-            If you did not request this, please ignore this email.
-
-            Thanks,
-            Mekwerb | ምኵራብ Team
-            """,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[email],
-        )
-
-        return Response({"message": "Reset link sent"})    
+        return Response({"message": "Reset link sent"})
 
 class ResetPasswordView(APIView):
     permission_classes = [AllowAny]

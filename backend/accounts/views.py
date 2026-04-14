@@ -86,13 +86,18 @@ class ForgotPasswordView(APIView):
 
         reset_link = f"https://mekwerab.vercel.app/reset-password?token={token.token}"
 
-        send_mail(
-            subject="Password Reset",
-            message=f"Click the link to reset your password:\n{reset_link}",
-            from_email=settings.EMAIL_HOST_USER,
-            recipient_list=[email],
-            fail_silently=False,
-        )
+        #  FIXED: proper try/except + indentation
+        try:
+            send_mail(
+                subject="Password Reset",
+                message=f"Click the link to reset your password:\n{reset_link}",
+                from_email=settings.EMAIL_HOST_USER,
+                recipient_list=[email],
+                fail_silently=False,
+            )
+            print("EMAIL SENT SUCCESS")
+        except Exception as e:
+            print("EMAIL ERROR:", str(e))
 
         return Response({
             "message": "If this email exists, a reset link was sent"

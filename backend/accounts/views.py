@@ -86,18 +86,10 @@ class ForgotPasswordView(APIView):
 
         reset_link = f"https://mekwerab.vercel.app/reset-password?token={token.token}"
 
-        try:
-            send_mail(
-                subject="Reset Your Password",
-                message=f"Reset here: {reset_link}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-        except Exception as e:
-            return Response({"error": str(e)}, status=500)
-
-        return Response({"message": "Reset link sent"})
+        print("EMAIL SKIPPED")
+        return Response({
+    "message": "Forgot password works (email disabled for test)"
+})
 
 class ResetPasswordView(APIView):
     permission_classes = [AllowAny]

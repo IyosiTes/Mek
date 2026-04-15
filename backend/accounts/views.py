@@ -1,6 +1,6 @@
-import email
 import token
-
+import threading
+from .utils.email import send_reset_email
 from django.shortcuts import render
 from rest_framework.views import APIView
 from rest_framework.response import  Response
@@ -9,7 +9,6 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.conf import settings
 from django.utils import timezone
 from datetime import timedelta
-from django.core.mail import send_mail
 from .models import User, PasswordResetToken
 from django.contrib.auth.hashers import make_password
 
@@ -84,20 +83,13 @@ class ForgotPasswordView(APIView):
             expires_at=timezone.now() + timedelta(minutes=15)
         )
 
-        reset_link = f"https://mekwerab.vercel.app/reset-password?token={token.token}"
+        reset_link = f"{settings.FRONTEND_URL}/reset-password?token={token.token}"
 
-        #  FIXED: proper try/except + indentation
-        try:
-            send_mail(
-                subject="Password Reset",
-                message=f"Click the link to reset your password:\n{reset_link}",
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[email],
-                fail_silently=False,
-            )
-            print("EMAIL SENT SUCCESS")
-        except Exception as e:
-            print("EMAIL ERROR:", str(e))
+        # background email send
+        threading.Thread(
+            target=send_reset_email,
+            args=(email, reset_link)
+        ).start()
 
         return Response({
             "message": "If this email exists, a reset link was sent"

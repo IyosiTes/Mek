@@ -115,3 +115,10 @@ class ResetPasswordView(APIView):
         reset_obj.delete()  
 
         return Response({"message": "Password reset successful"})
+    
+class HealthCheckView(APIView):
+        permission_classes = [AllowAny]
+        def get(self, request):
+         return Response({
+            "status": "ok"
+        })

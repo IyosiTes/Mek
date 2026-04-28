@@ -40,6 +40,9 @@ urlpatterns = [
     #orders endpoint
     path("api/orders/", include("orders.urls")),
 
+    #community endpoint 
+    path('api/community/', include('community.urls')),
+
     ]
 
 

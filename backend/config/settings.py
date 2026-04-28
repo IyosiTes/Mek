@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'catalog',
     'cart',
     'orders',
+    'community',
 
     'rest_framework',
     'corsheaders',
@@ -188,6 +189,8 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
+     'DEFAULT_PAGINATION_CLASS': 'community.pagination.PostPagination',
+     'PAGE_SIZE': 20,
 }
 
 from datetime import timedelta

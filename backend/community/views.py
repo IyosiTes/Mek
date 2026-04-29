@@ -8,7 +8,7 @@ from django.utils import timezone
 from datetime import timedelta
 # Create your views here.
 
-from rest_framework.generics import ListCreateAPIView, ListAPIView
+from rest_framework.generics import ListCreateAPIView, ListAPIView, RetrieveAPIView
 from django.db.models import Count, Q, Prefetch
 
     
@@ -137,3 +137,14 @@ class CommentList(ListAPIView):
                 )
             )
         ).order_by('created_at')
+    
+
+class PostRetrieveAPIView(RetrieveAPIView):
+    serializer_class = PostSerializer
+    lookup_field = 'public_id'
+    lookup_url_kwarg = "post_id" 
+
+    def get_queryset(self):
+        return Post.objects.filter(is_deleted=False).annotate(
+            comment_count=Count("comments")
+        )

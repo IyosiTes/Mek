@@ -8,6 +8,7 @@ class CommentSerializer(serializers.ModelSerializer):
     dislike_count = serializers.SerializerMethodField()
     replies = serializers.SerializerMethodField()
     time_ago = serializers.SerializerMethodField()
+    is_author = serializers.SerializerMethodField()
 
     class Meta:
         model = Comment
@@ -19,8 +20,13 @@ class CommentSerializer(serializers.ModelSerializer):
             'time_ago',
             'like_count', 
             'dislike_count', 
-            'replies'
+            'replies',
+            'is_author'
+
             ]
+    def get_is_author(self, obj):
+        post_anon = obj.post.anonymous_id
+        return obj.anonymous_id == post_anon
 
     def get_like_count(self, obj):
      return getattr(obj, 'like_count', 0)
@@ -37,7 +43,7 @@ class CommentSerializer(serializers.ModelSerializer):
      return CommentSerializer(replies.all()[:5], many=True).data
     
     def get_time_ago(self, obj):
-        return timesince(obj.created_at) + "ago"
+        return timesince(obj.created_at) + " ago"
 
 
 class CommentReactionSerializer(serializers.ModelSerializer):

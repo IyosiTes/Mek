@@ -67,6 +67,7 @@ class PostFeedSerializer(serializers.ModelSerializer):
             "comment_count",
             "vote_score",
             "user_vote",
+            "created_at",
         ]
 
    

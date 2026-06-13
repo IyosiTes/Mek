@@ -94,7 +94,7 @@ urlpatterns = [
     ),
 
     path(
-        "notifications/mark-read/",
+        "notifications/<int:notification_id>/mark-read/",
         MarkNotificationReadView.as_view()
     ),
 ]

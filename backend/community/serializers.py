@@ -64,6 +64,7 @@ class PostFeedSerializer(serializers.ModelSerializer):
             "image_url",
             "is_admin_post",
             "is_pinned",
+            "is_author",
             "comment_count",
             "vote_score",
             "user_vote",

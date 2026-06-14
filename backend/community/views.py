@@ -87,11 +87,25 @@ class PostFeedView(ListAPIView):
                 output_field=IntegerField()
             )
 
+            is_author_annotation = Case(
+                When(
+                    author_id=community_user.id,
+                    then=Value(True)
+                ),
+                default=Value(False),
+                output_field=BooleanField()
+            )
+
         else:
 
             user_vote_annotation = Value(
                 0,
                 output_field=IntegerField()
+            )
+
+            is_author_annotation = Value(
+                False,
+                output_field=BooleanField()
             )
 
         return (
@@ -117,11 +131,7 @@ class PostFeedView(ListAPIView):
 
                 user_vote=user_vote_annotation,
 
-                is_author=Case(
-                    When(author=community_user, then=Value(True)),
-                    default=Value(False),
-                    output_field=BooleanField()
-                ),
+                is_author=is_author_annotation,
             )
             .only(
                 "public_id",

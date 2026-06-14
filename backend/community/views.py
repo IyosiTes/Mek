@@ -115,7 +115,13 @@ class PostFeedView(ListAPIView):
                     output_field=IntegerField()
                 ),
 
-                user_vote=user_vote_annotation
+                user_vote=user_vote_annotation,
+
+                is_author=Case(
+                    When(author=community_user, then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField()
+                ),
             )
             .only(
                 "public_id",

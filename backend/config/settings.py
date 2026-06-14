@@ -180,6 +180,7 @@ STORAGES = {
 
 #adding CORS and AUTH settings for api
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+CORS_ALLOWED_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "http://localhost:5173").split(",")
 
 SESSION_COOKIE_SAMESITE = 'Lax'

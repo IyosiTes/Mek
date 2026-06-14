@@ -51,6 +51,7 @@ class PostFeedSerializer(serializers.ModelSerializer):
     read_only=True,
     default=0
     )
+    is_author = serializers.BooleanField(read_only=True)
    
    
 

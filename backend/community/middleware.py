@@ -1,37 +1,36 @@
 import uuid
 
-from django.conf import settings
-
 from .models import CommunityUser
 
 
 class CommunityUserMiddleware:
-
-    COOKIE_NAME = "community_uuid"
 
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
 
-        community_uuid = (
-            request.headers.get("X-Community-UUID")
-            or request.COOKIES.get(self.COOKIE_NAME)
+        community_uuid = request.headers.get(
+            "X-Community-UUID"
         )
 
         community_user = None
-        set_new_cookie = False
+
+        generated_uuid = None
 
         if community_uuid:
 
             try:
+
                 community_uuid = uuid.UUID(
                     str(community_uuid)
                 )
 
                 community_user = (
                     CommunityUser.objects
-                    .filter(uuid=community_uuid)
+                    .filter(
+                        uuid=community_uuid
+                    )
                     .first()
                 )
 
@@ -52,21 +51,22 @@ class CommunityUserMiddleware:
                 CommunityUser.objects.create()
             )
 
-            set_new_cookie = True
-
-        request.community_user = community_user
-
-        response = self.get_response(request)
-
-        if set_new_cookie:
-
-            response.set_cookie(
-                self.COOKIE_NAME,
-                str(community_user.uuid),
-                max_age=60 * 60 * 24 * 365 * 2,
-                httponly=True,
-                secure=not settings.DEBUG,
-                samesite="Lax",
+            generated_uuid = str(
+                community_user.uuid
             )
+
+        request.community_user = (
+            community_user
+        )
+
+        response = self.get_response(
+            request
+        )
+
+        if generated_uuid:
+
+            response[
+                "X-Community-UUID"
+            ] = generated_uuid
 
         return response

@@ -4,8 +4,6 @@ from django.conf import settings
 
 from .models import CommunityUser
 
-# Future: add Redis caching
-
 
 class CommunityUserMiddleware:
 
@@ -17,35 +15,42 @@ class CommunityUserMiddleware:
     def __call__(self, request):
 
         community_uuid = (
-            request.COOKIES.get(self.COOKIE_NAME)
-            or request.headers.get("X-Community-UUID")
+            request.headers.get("X-Community-UUID")
+            or request.COOKIES.get(self.COOKIE_NAME)
         )
 
         community_user = None
         set_new_cookie = False
 
         if community_uuid:
+
             try:
-                community_user = CommunityUser.objects.get(
-                    uuid=community_uuid
+                community_uuid = uuid.UUID(
+                    str(community_uuid)
                 )
 
-            except (
-                CommunityUser.DoesNotExist,
-                ValueError,
-            ):
+                community_user = (
+                    CommunityUser.objects
+                    .filter(uuid=community_uuid)
+                    .first()
+                )
 
-                try:
-                    community_user = CommunityUser.objects.create(
-                        uuid=community_uuid
+                if not community_user:
+
+                    community_user = (
+                        CommunityUser.objects.create(
+                            uuid=community_uuid
+                        )
                     )
 
-                except Exception:
-                    pass
+            except ValueError:
+                pass
 
         if not community_user:
 
-            community_user = CommunityUser.objects.create()
+            community_user = (
+                CommunityUser.objects.create()
+            )
 
             set_new_cookie = True
 
@@ -58,7 +63,7 @@ class CommunityUserMiddleware:
             response.set_cookie(
                 self.COOKIE_NAME,
                 str(community_user.uuid),
-                max_age=60 * 60 * 24 * 365 * 2,  # 2 years
+                max_age=60 * 60 * 24 * 365 * 2,
                 httponly=True,
                 secure=not settings.DEBUG,
                 samesite="Lax",

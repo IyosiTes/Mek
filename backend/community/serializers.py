@@ -1,30 +1,17 @@
 from rest_framework import serializers
 from django.utils.timesince import timesince
-from .models import CommunityUser, Post, Comment, Vote, Notification
+from .models import  Post, Comment, Vote, Notification, Profile
 
-
-def get_community_user(context):
-    """
-    Central helper — gets current CommunityUser from
-    request context. Returns None for anonymous users.
-    Used across all serializers for user_vote, is_author etc.
-    """
-    request = context.get("request")
-    if not request:
-        return None
-    return getattr(request, "community_user", None)
-
-
-class CommunityUserSerializer(serializers.ModelSerializer):
-    """
-    Minimal — embedded inside Post/Comment responses.
-    Never expose django_user, is_banned, etc here.
-    """
+class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CommunityUser
-        fields = ["uuid", "display_name", "avatar", "is_verified"]
+        model = Profile
+        fields = [
+            "display_name",
+            "avatar",
+            "bio",
+            "is_verified",
+        ]
         read_only_fields = fields
-
 class PostFeedSerializer(serializers.ModelSerializer):
     """
     Used in the main feed list — lightweight, no comments.
@@ -36,15 +23,17 @@ class PostFeedSerializer(serializers.ModelSerializer):
     )
     """
     author_name = serializers.CharField(
-        source="author.display_name",
+        source="author.profile.display_name",
         read_only=True
     )
     author_avatar = serializers.CharField(
-        source="author.avatar",
+        source="author.profile.avatar",
         read_only=True
     )
     # These come from queryset annotation in the view
     comment_count = serializers.IntegerField(read_only=True, default=0)
+    upvote_count = serializers.IntegerField(read_only=True, default=0)
+    downvote_count = serializers.IntegerField(read_only=True, default=0)
     vote_score = serializers.IntegerField(read_only=True, default=0)
     
     user_vote = serializers.IntegerField(
@@ -67,6 +56,8 @@ class PostFeedSerializer(serializers.ModelSerializer):
             "is_pinned",
             "is_author",
             "comment_count",
+            "upvote_count",
+            "downvote_count",
             "vote_score",
             "user_vote",
             "created_at",
@@ -111,7 +102,12 @@ class PostDetailSerializer(serializers.ModelSerializer):
     Never load comments inside post serializer —
     a post can have 10,000 comments, that would kill your server.
     """
-    author = CommunityUserSerializer(read_only=True)
+    author = ProfileSerializer(
+    source="author.profile",
+    read_only=True
+)  
+    upvote_count = serializers.IntegerField(read_only=True, default=0)
+    downvote_count = serializers.IntegerField(read_only=True, default=0)
     vote_score = serializers.IntegerField(read_only=True, default=0)
     comment_count = serializers.IntegerField(read_only=True, default=0)
     user_vote = serializers.IntegerField(
@@ -130,6 +126,8 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "is_admin_post",
             "is_pinned",
             #"is_deleted",
+            "upvote_count",
+            "downvote_count",
             "vote_score",
             "comment_count",
             "user_vote",
@@ -141,11 +139,15 @@ class PostDetailSerializer(serializers.ModelSerializer):
    
 
     def get_is_author(self, obj):
-        # Correctly checks if REQUEST USER is post author
-        community_user = get_community_user(self.context)
-        if not community_user:
-            return False
-        return obj.author_id == community_user.id
+     request = self.context.get("request")
+
+     if (
+        not request
+        or not request.user.is_authenticated
+    ):
+        return False
+
+     return obj.author_id == request.user.id
 
 
 
@@ -161,11 +163,11 @@ class CommentSerializer(serializers.ModelSerializer):
     avoids recursive DB queries.
     """
     author_name = serializers.CharField(
-        source="author.display_name",
+        source="author.profile.display_name",
         read_only=True
     )
     author_avatar = serializers.CharField(
-        source="author.avatar",
+        source="author.profile.avatar",
         read_only=True
     )
     post = serializers.IntegerField(
@@ -179,6 +181,9 @@ class CommentSerializer(serializers.ModelSerializer):
         allow_null=True
     )
 
+    is_post_creator = serializers.BooleanField(read_only=True)
+    upvote_count = serializers.IntegerField(read_only=True, default=0)
+    downvote_count = serializers.IntegerField(read_only=True, default=0)
     vote_score = serializers.IntegerField(read_only=True, default=0)
 
     user_vote = serializers.IntegerField(
@@ -202,6 +207,7 @@ class CommentSerializer(serializers.ModelSerializer):
             "post",
             "content",
             "parent",       #null for top-level comments, else parent comment ID
+            "is_post_creator",
             "author_name",
             "author_avatar",
             "vote_score",
@@ -270,11 +276,11 @@ class NotificationSerializer(serializers.ModelSerializer):
     navigate directly to the right content on tap.
     """
     actor_name = serializers.CharField(
-        source="actor.display_name",
+        source="actor.profile.display_name",
         read_only=True
     )
     actor_avatar = serializers.CharField(
-        source="actor.avatar",
+        source="actor.profile.avatar",
         read_only=True
     )
     # Navigation targets
@@ -307,7 +313,11 @@ class NotificationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_message(self, obj):
-        name = obj.actor.display_name if obj.actor else "Someone"
+        name = (
+              obj.actor.profile.display_name
+              if obj.actor
+              else "Someone"
+)
         return {
             "comment_on_post":    f"{name} commented on your post",
             "reply_on_comment":   f"{name} replied to your comment",

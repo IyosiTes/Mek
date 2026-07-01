@@ -13,7 +13,7 @@ from .models import User, PasswordResetToken
 from django.contrib.auth.hashers import make_password
 
 
-from accounts.serializers import RegisterSerializer,UserSerializer
+from accounts.serializers import RegisterSerializer,UserSerializer, CommunityRegisterSerializer
 # Create your views here.
 class MeView(APIView):
     permission_classes = [IsAuthenticated]
@@ -45,6 +45,21 @@ class RegisterView(APIView):
             )
         else:
            return Response(serializer.errors, status=400)
+        
+class CommunityRegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = CommunityRegisterSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"message": "User created successfully"},
+                status=status.HTTP_201_CREATED
+            )
+
+        return Response(serializer.errors, status=400)        
 class UserProfileView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):

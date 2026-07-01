@@ -1,43 +1,90 @@
 from django.contrib import admin
-from .models import CommunityUser, Post, Comment, Notification
+from .models import (
+    Profile,
+    Post,
+    Comment,
+    Vote,
+    Notification,
+)
 
 
-@admin.register(CommunityUser)
-class CommunityUserAdmin(admin.ModelAdmin):
+# ==========================================================
+# Profile
+# ==========================================================
+
+@admin.register(Profile)
+class ProfileAdmin(admin.ModelAdmin):
 
     list_display = (
-        "id",
+        "user",
         "display_name",
         "is_verified",
-        "is_registered",
         "created_at",
     )
 
     list_filter = (
         "is_verified",
-        "is_registered",
+        "created_at",
     )
 
     search_fields = (
         "display_name",
-        "uuid",
+        "user__username",
+        "user__email",
+    )
+
+    list_select_related = (
+        "user",
     )
 
     readonly_fields = (
-        "uuid",
         "created_at",
         "updated_at",
     )
 
-    actions = ["verify_users", "unverify_users"]
+    actions = (
+        "verify_profiles",
+        "unverify_profiles",
+    )
 
-    @admin.action(description="Verify selected users")
-    def verify_users(self, request, queryset):
+    fieldsets = (
+        (
+            "Profile",
+            {
+                "fields": (
+                    "user",
+                    "display_name",
+                    "bio",
+                    "avatar",
+                    "is_verified",
+                )
+            },
+        ),
+        (
+            "Dates",
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                ),
+            },
+        ),
+    )
+
+    @admin.action(description="Verify selected profiles")
+    def verify_profiles(self, request, queryset):
         queryset.update(is_verified=True)
 
     @admin.action(description="Remove verification")
-    def unverify_users(self, request, queryset):
+    def unverify_profiles(self, request, queryset):
         queryset.update(is_verified=False)
+
+
+# ==========================================================
+# Posts
+# ==========================================================
+
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
 
@@ -60,29 +107,86 @@ class PostAdmin(admin.ModelAdmin):
 
     search_fields = (
         "content",
-        "author__display_name",
+        "author__username",
+        "author__profile__display_name",
     )
 
-    list_select_related = ("author",)
+    ordering = (
+        "-created_at",
+    )
 
-    actions = [
+    list_select_related = (
+        "author",
+        "author__profile",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
+
+    actions = (
         "pin_posts",
         "unpin_posts",
+        "mark_admin_posts",
+        "unmark_admin_posts",
         "soft_delete_posts",
         "restore_posts",
-    ]
+    )
+
+    fieldsets = (
+        (
+            "Post",
+            {
+                "fields": (
+                    "author",
+                    "content",
+                    "image_url",
+                )
+            },
+        ),
+        (
+            "Moderation",
+            {
+                "fields": (
+                    "is_pinned",
+                    "is_admin_post",
+                    "is_deleted",
+                )
+            },
+        ),
+        (
+            "Dates",
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                ),
+            },
+        ),
+    )
 
     def short_content(self, obj):
-        return obj.content[:60]
+        return obj.content[:70]
+
     short_content.short_description = "Content"
 
-    @admin.action(description="Pin posts")
+    @admin.action(description="Pin selected posts")
     def pin_posts(self, request, queryset):
         queryset.update(is_pinned=True)
 
-    @admin.action(description="Unpin posts")
+    @admin.action(description="Unpin selected posts")
     def unpin_posts(self, request, queryset):
         queryset.update(is_pinned=False)
+
+    @admin.action(description="Mark as admin posts")
+    def mark_admin_posts(self, request, queryset):
+        queryset.update(is_admin_post=True)
+
+    @admin.action(description="Remove admin flag")
+    def unmark_admin_posts(self, request, queryset):
+        queryset.update(is_admin_post=False)
 
     @admin.action(description="Soft delete posts")
     def soft_delete_posts(self, request, queryset):
@@ -91,6 +195,12 @@ class PostAdmin(admin.ModelAdmin):
     @admin.action(description="Restore posts")
     def restore_posts(self, request, queryset):
         queryset.update(is_deleted=False)
+
+
+# ==========================================================
+# Comments
+# ==========================================================
+
 @admin.register(Comment)
 class CommentAdmin(admin.ModelAdmin):
 
@@ -104,24 +214,132 @@ class CommentAdmin(admin.ModelAdmin):
         "created_at",
     )
 
-    list_filter = ("is_deleted", "created_at")
+    list_filter = (
+        "is_deleted",
+        "created_at",
+    )
 
-    search_fields = ("content", "author__display_name")
+    search_fields = (
+        "content",
+        "author__username",
+        "author__profile__display_name",
+    )
 
-    list_select_related = ("author", "post", "parent")
+    ordering = (
+        "-created_at",
+    )
 
-    actions = ["soft_delete", "restore"]
+    list_select_related = (
+        "author",
+        "author__profile",
+        "post",
+        "parent",
+    )
+
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+    )
+
+    actions = (
+        "soft_delete_comments",
+        "restore_comments",
+    )
+
+    fieldsets = (
+        (
+            "Comment",
+            {
+                "fields": (
+                    "author",
+                    "post",
+                    "parent",
+                    "content",
+                )
+            },
+        ),
+        (
+            "Moderation",
+            {
+                "fields": (
+                    "is_deleted",
+                )
+            },
+        ),
+        (
+            "Dates",
+            {
+                "classes": ("collapse",),
+                "fields": (
+                    "created_at",
+                    "updated_at",
+                ),
+            },
+        ),
+    )
 
     def short_content(self, obj):
-        return obj.content[:60]
+        return obj.content[:70]
+
+    short_content.short_description = "Content"
 
     @admin.action(description="Soft delete comments")
-    def soft_delete(self, request, queryset):
-        queryset.update(is_deleted=True)
+    def soft_delete_comments(self, request, queryset):
+        queryset.update(
+            is_deleted=True,
+            content="[deleted]",
+        )
 
     @admin.action(description="Restore comments")
-    def restore(self, request, queryset):
+    def restore_comments(self, request, queryset):
         queryset.update(is_deleted=False)
+
+
+# ==========================================================
+# Votes
+# ==========================================================
+
+@admin.register(Vote)
+class VoteAdmin(admin.ModelAdmin):
+
+    list_display = (
+        "id",
+        "user",
+        "post",
+        "comment",
+        "value",
+        "created_at",
+    )
+
+    list_filter = (
+        "value",
+        "created_at",
+    )
+
+    search_fields = (
+        "user__username",
+        "user__profile__display_name",
+    )
+
+    ordering = (
+        "-created_at",
+    )
+
+    list_select_related = (
+        "user",
+        "user__profile",
+        "post",
+        "comment",
+    )
+
+    readonly_fields = (
+        "created_at",
+    )
+
+
+# ==========================================================
+# Notifications
+# ==========================================================
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
@@ -138,11 +356,27 @@ class NotificationAdmin(admin.ModelAdmin):
     list_filter = (
         "notification_type",
         "is_read",
+        "created_at",
     )
 
     search_fields = (
-        "recipient__display_name",
-        "actor__display_name",
+        "recipient__username",
+        "recipient__profile__display_name",
+        "actor__username",
+        "actor__profile__display_name",
+    )
+
+    ordering = (
+        "-created_at",
+    )
+
+    list_select_related = (
+        "recipient",
+        "recipient__profile",
+        "actor",
+        "actor__profile",
+        "post",
+        "comment",
     )
 
     readonly_fields = (
@@ -154,14 +388,16 @@ class NotificationAdmin(admin.ModelAdmin):
         "created_at",
     )
 
-    actions = ["mark_read", "mark_unread"]
+    actions = (
+        "mark_read",
+        "mark_unread",
+    )
 
-    @admin.action(description="Mark as read")
+    @admin.action(description="Mark selected notifications as read")
     def mark_read(self, request, queryset):
         queryset.update(is_read=True)
 
-    @admin.action(description="Mark as unread")
+    @admin.action(description="Mark selected notifications as unread")
     def mark_unread(self, request, queryset):
         queryset.update(is_read=False)
-
         

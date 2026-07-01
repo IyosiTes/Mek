@@ -1,33 +1,21 @@
-import uuid
-
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.core.validators import MaxLengthValidator
 
 # Create your models here.
-class CommunityUser(models.Model):
+class Profile(models.Model):
 
-    uuid = models.UUIDField(
-        default = uuid.uuid4,
-        unique=True,
-        editable=False,
-        db_index=True
-    )
-
-    django_user = models.OneToOneField(
+    user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name="community_user",
-        db_index=True
-    )                                                               
+        on_delete=models.CASCADE,
+        related_name="profile"
+    )
 
     display_name = models.CharField(
-        max_length=50,
-        default="ምእመን"
-    )
+    max_length=50,
+    default="ምእመን"
+)
 
     bio = models.TextField(
         blank=True,
@@ -35,12 +23,7 @@ class CommunityUser(models.Model):
     )
 
     avatar = models.URLField(
-        blank=True,
-        null=True
-    )
-
-    is_registered = models.BooleanField(
-        default=False
+        blank=True
     )
 
     is_verified = models.BooleanField(
@@ -55,26 +38,18 @@ class CommunityUser(models.Model):
         auto_now=True
     )
 
-    class Meta:
-        indexes = [
-            models.Index(fields=["created_at"]
-                        ),
-        ]
-
     def __str__(self):
         return self.display_name
-    
 class Post(models.Model):
     public_id = models.BigAutoField(
         primary_key=True
         )
     
     author = models.ForeignKey(
-        CommunityUser,
-        on_delete=models.CASCADE,
-        related_name='posts',
-       
-    )
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    related_name="community_posts",
+)
     content = models.TextField(
     validators=[
         MaxLengthValidator(3000)
@@ -107,12 +82,11 @@ class Comment(models.Model):
         related_name='comments', 
         db_index=True)
     
-    author =models.ForeignKey(
-        CommunityUser,
-        on_delete=models.CASCADE,
-        related_name='comments',
-    )
-    
+    author = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    related_name="community_comments",
+)
     parent = models.ForeignKey(
         'self',
         null=True,
@@ -160,10 +134,10 @@ class Vote(models.Model):
     )
 
     user = models.ForeignKey(
-        CommunityUser,
-        on_delete=models.CASCADE,
-        related_name="votes"
-    )
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    related_name="community_votes",
+)
     
     post = models.ForeignKey(
         Post,
@@ -250,21 +224,18 @@ class Notification(models.Model):
     ]
 
     recipient = models.ForeignKey(
-        CommunityUser,
-        on_delete=models.CASCADE,
-        related_name="notifications",
-        db_index=True
-    )
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    related_name="community_notifications",
+)
 
     actor = models.ForeignKey(
-        CommunityUser,
-        on_delete=models.CASCADE,
-        related_name="generated_notifications",
-        null=True,
-        blank=True,
-        db_index=True
-
-    )
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    related_name="community_generated_notifications",
+    null=True,
+    blank=True,
+)
 
     post = models.ForeignKey(
         Post,

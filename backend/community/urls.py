@@ -1,6 +1,8 @@
 from django.urls import path
 
 from .views import (
+    DeleteNotificationView,
+    MarkAllNotificationsReadView,
     PostFeedView,
     CreatePostView,
     PostDetailView,
@@ -18,16 +20,11 @@ from .views import (
     NotificationUnreadCountView,
     MarkNotificationReadView,
 
-    CommunityMeView,
+   
 )
 
 urlpatterns = [
 
-    # current user
-    path(
-        "me/",
-        CommunityMeView.as_view()
-    ),
 
     # posts
     path(
@@ -97,4 +94,15 @@ urlpatterns = [
         "notifications/<int:notification_id>/mark-read/",
         MarkNotificationReadView.as_view()
     ),
+
+    path(
+    "notifications/mark-all-read/",
+    MarkAllNotificationsReadView.as_view()
+),
+
+path(
+    "notifications/<int:pk>/delete/",
+    DeleteNotificationView.as_view()
+),
+
 ]

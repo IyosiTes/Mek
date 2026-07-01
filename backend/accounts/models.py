@@ -7,7 +7,7 @@ from django.utils import timezone
 class User(AbstractUser):
     # Extra fields beyond Django's default
     email = models.EmailField(unique=True)
-    phone_number = models.CharField(max_length=20, blank=False, null=False)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
     church_affiliation = models.CharField(max_length=200, blank=True, null=True)
     address = models.CharField(max_length=255, blank=True, null=True)
 

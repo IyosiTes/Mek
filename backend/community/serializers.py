@@ -182,8 +182,10 @@ class CommentSerializer(serializers.ModelSerializer):
     )
 
     is_post_creator = serializers.BooleanField(read_only=True)
+
     upvote_count = serializers.IntegerField(read_only=True, default=0)
     downvote_count = serializers.IntegerField(read_only=True, default=0)
+
     vote_score = serializers.IntegerField(read_only=True, default=0)
 
     user_vote = serializers.IntegerField(
@@ -210,6 +212,8 @@ class CommentSerializer(serializers.ModelSerializer):
             "is_post_creator",
             "author_name",
             "author_avatar",
+            "upvote_count",
+            "downvote_count",
             "vote_score",
             "user_vote",
             "is_author",

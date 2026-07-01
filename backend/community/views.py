@@ -9,6 +9,7 @@ from django.db.models import (
     OuterRef,
     Subquery,
     When,
+    Q,
     BooleanField,
 )
 from django.db.models.functions import Coalesce, Substr
@@ -16,12 +17,11 @@ from django.db.models.functions import Coalesce, Substr
 #from backend.accounts import serializers
 from .pagination import PostPagination, CommentPagination, NotificationPagination
 from .serializers import (CommentUpdateSerializer, 
-CommunityUserSerializer,
 PostFeedSerializer, 
 PostCreateSerializer, 
 PostDetailSerializer,
 CommentSerializer, 
-NotificationSerializer,
+NotificationSerializer, PostUpdateSerializer,
 VoteRequestSerializer)
 from .models import Post, Comment, Vote, Notification
 from rest_framework.generics import DestroyAPIView, ListAPIView, RetrieveAPIView, CreateAPIView, UpdateAPIView
@@ -31,19 +31,23 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import PermissionDenied
 from rest_framework import status
 from django.db import transaction
+from rest_framework.permissions import AllowAny, IsAuthenticated
 
 class PostFeedView(ListAPIView):
+    permission_classes = [AllowAny]
 
     serializer_class = PostFeedSerializer
     pagination_class = PostPagination
 
     def get_queryset(self):
 
-        community_user = getattr(
-            self.request,
-            "community_user",
-            None
+        user = (
+            self.request.user
+            if self.request.user.is_authenticated
+            else None
         )
+
+    
 
         comment_count_subquery = (
             Comment.objects
@@ -70,12 +74,38 @@ class PostFeedView(ListAPIView):
             .values("total")[:1]
         )
 
-        if community_user:
+        upvote_count_subquery = (
+           Vote.objects
+           .filter(
+               post=OuterRef("pk"),
+              value=Vote.UPVOTE,
+         )
+           .values("post")
+           .annotate(
+           total=Count("id")
+        )
+          .values("total")[:1]
+    )
+        
+        downvote_count_subquery = (
+           Vote.objects
+              .filter(
+                post=OuterRef("pk"),
+                 value=Vote.DOWNVOTE,
+             )
+              .values("post")
+              .annotate(
+         total=Count("id")
+         )
+           .values("total")[:1]
+        )
+
+        if user:
 
             user_vote_subquery = (
                 Vote.objects
                 .filter(
-                    user=community_user,
+                    user=user,
                     post=OuterRef("pk")
                 )
                 .values("value")[:1]
@@ -89,7 +119,7 @@ class PostFeedView(ListAPIView):
 
             is_author_annotation = Case(
                 When(
-                    author_id=community_user.id,
+                    author_id=user.id,
                     then=Value(True)
                 ),
                 default=Value(False),
@@ -114,7 +144,8 @@ class PostFeedView(ListAPIView):
                 is_deleted=False
             )
             .select_related(
-                "author"
+                "author",
+                "author__profile",
             )
             .annotate(
                 comment_count=Coalesce(
@@ -127,6 +158,17 @@ class PostFeedView(ListAPIView):
                     Subquery(vote_score_subquery),
                     Value(0),
                     output_field=IntegerField()
+                ),
+                upvote_count=Coalesce(
+                    Subquery(upvote_count_subquery),
+                    Value(0),
+                      output_field=IntegerField(),
+                ),
+
+                downvote_count=Coalesce(
+                    Subquery(downvote_count_subquery),
+                    Value(0),
+                    output_field=IntegerField(),
                 ),
 
                 user_vote=user_vote_annotation,
@@ -141,9 +183,9 @@ class PostFeedView(ListAPIView):
                 "is_pinned",
                 "created_at",
 
-                "author__display_name",
-                "author__avatar",
-                "author__is_verified",
+                "author__profile__display_name",
+                "author__profile__avatar",
+                "author__profile__is_verified",
             )
             .order_by(
                 "-is_pinned",
@@ -151,18 +193,20 @@ class PostFeedView(ListAPIView):
             )
         )
 class CreatePostView(CreateAPIView):
+    permission_classes = [IsAuthenticated]
 
     serializer_class = PostCreateSerializer
 
     def perform_create(self, serializer):
 
         serializer.save(
-            author=self.request.community_user
+            author=self.request.user
         )
 
 class UpdatePostView(UpdateAPIView):
+    permission_classes = [IsAuthenticated]
 
-    serializer_class = PostCreateSerializer
+    serializer_class = PostUpdateSerializer
 
     lookup_field = "public_id"
 
@@ -174,7 +218,7 @@ class UpdatePostView(UpdateAPIView):
 
         post = super().get_object()
 
-        if post.author_id != self.request.community_user.id:
+        if post.author_id != self.request.user.id:
             raise PermissionDenied(
                 "You cannot edit this post."
             )
@@ -187,6 +231,7 @@ class UpdatePostView(UpdateAPIView):
         return post        
 
 class DeletePostView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, public_id):
 
@@ -196,7 +241,7 @@ class DeletePostView(APIView):
             is_deleted=False
         )
 
-        if post.author_id != request.community_user.id:
+        if post.author_id != request.user.id:
             raise PermissionDenied(
                 "You cannot delete this post."
             )
@@ -217,6 +262,7 @@ class DeletePostView(APIView):
         })        
 
 class PostDetailView(RetrieveAPIView):
+    permission_classes = [AllowAny]
 
     serializer_class = PostDetailSerializer
 
@@ -224,11 +270,11 @@ class PostDetailView(RetrieveAPIView):
 
     def get_queryset(self):
 
-        community_user = getattr(
-            self.request,
-            "community_user",
-            None
-        )
+        user = (
+          self.request.user
+          if self.request.user.is_authenticated
+          else None
+)
 
         comment_count_subquery = (
             Comment.objects
@@ -258,12 +304,38 @@ class PostDetailView(RetrieveAPIView):
             .values("total")[:1]
         )
 
-        if community_user:
+        upvote_count_subquery = (
+    Vote.objects
+    .filter(
+        post=OuterRef("pk"),
+        value=Vote.UPVOTE,
+    )
+    .values("post")
+    .annotate(
+        total=Count("id")
+    )
+    .values("total")[:1]
+)
+
+        downvote_count_subquery = (
+    Vote.objects
+    .filter(
+        post=OuterRef("pk"),
+        value=Vote.DOWNVOTE,
+    )
+    .values("post")
+    .annotate(
+        total=Count("id")
+    )
+    .values("total")[:1]
+)
+
+        if user:
 
             user_vote_subquery = (
                 Vote.objects
                 .filter(
-                    user=community_user,
+                    user=user,
                     post=OuterRef("pk")
                 )
                 .values("value")[:1]
@@ -290,7 +362,8 @@ class PostDetailView(RetrieveAPIView):
                 is_deleted=False
             )
             .select_related(
-                "author"
+                "author",
+                "author__profile",
             )
             .annotate(
                 comment_count=Coalesce(
@@ -308,6 +381,17 @@ class PostDetailView(RetrieveAPIView):
                     Value(0),
                     output_field=IntegerField()
                 ),
+                upvote_count=Coalesce(
+    Subquery(upvote_count_subquery),
+    Value(0),
+    output_field=IntegerField(),
+),
+
+               downvote_count=Coalesce(
+    Subquery(downvote_count_subquery),
+    Value(0),
+    output_field=IntegerField(),
+),
 
                 user_vote=user_vote_annotation
             )
@@ -322,12 +406,13 @@ class PostDetailView(RetrieveAPIView):
                 "updated_at",
 
                 "author__uuid",
-                "author__display_name",
-                "author__avatar",
-                "author__is_verified",
+                "author__profile__display_name",
+                "author__profile__avatar",
+                "author__profile__is_verified",
             )
         )
 class CommentListView(ListAPIView):
+    permission_classes = [AllowAny]
 
     serializer_class = CommentSerializer
     pagination_class = CommentPagination
@@ -336,12 +421,12 @@ class CommentListView(ListAPIView):
 
         post_id = self.kwargs["post_id"]
 
-        community_user = getattr(
-            self.request,
-            "community_user",
-            None
-        )
-
+        user = (
+    self.request.user
+    if self.request.user.is_authenticated
+    else None
+)
+    
         vote_score_subquery = (
             Vote.objects
             .filter(
@@ -353,14 +438,39 @@ class CommentListView(ListAPIView):
             )
             .values("total")[:1]
         )
+        upvote_count_subquery = (
+    Vote.objects
+    .filter(
+        comment=OuterRef("pk"),
+        value=Vote.UPVOTE,
+    )
+    .values("comment")
+    .annotate(
+        total=Count("id")
+    )
+    .values("total")[:1]
+)
 
-        if community_user:
+        downvote_count_subquery = (
+    Vote.objects
+    .filter(
+        comment=OuterRef("pk"),
+        value=Vote.DOWNVOTE,
+    )
+    .values("comment")
+    .annotate(
+        total=Count("id")
+    )
+    .values("total")[:1]
+)
+
+        if user:
 
             user_vote_subquery = (
                 Vote.objects
                 .filter(
                     comment=OuterRef("pk"),
-                    user=community_user
+                    user=user
                 )
                 .values("value")[:1]
             )
@@ -375,12 +485,21 @@ class CommentListView(ListAPIView):
 
             is_author_annotation = Case(
                 When(
-                    author_id=community_user.id,
+                    author_id=user.id,
                     then=Value(True)
                 ),
                 default=Value(False),
                 output_field=BooleanField()
             )
+
+            is_post_creator_annotation = Case(
+                When(
+                    author_id=F("post__author_id"),
+                    then=Value(True),
+                 ),
+                default=Value(False),
+                output_field=BooleanField(),
+         )
 
         else:
 
@@ -400,7 +519,8 @@ class CommentListView(ListAPIView):
                 post_id=post_id,
             )
             .select_related(
-                "author"
+                "author",
+                "author__profile",
             )
             .annotate(
                 vote_score=Coalesce(
@@ -411,9 +531,23 @@ class CommentListView(ListAPIView):
                     Value(0)
                 ),
 
+                upvote_count=Coalesce(
+    Subquery(upvote_count_subquery),
+    Value(0),
+    output_field=IntegerField(),
+),
+
+                downvote_count=Coalesce(
+    Subquery(downvote_count_subquery),
+    Value(0),
+    output_field=IntegerField(),
+),
+
                 user_vote=user_vote_annotation,
 
                 is_author=is_author_annotation,
+
+                is_post_creator=is_post_creator_annotation,
 
                 reply_preview=Case(
                     When(
@@ -436,6 +570,7 @@ class CommentListView(ListAPIView):
         )
        
 class UpdateCommentView(UpdateAPIView):
+    permission_classes = [IsAuthenticated]
 
     serializer_class = CommentUpdateSerializer
 
@@ -448,9 +583,9 @@ class UpdateCommentView(UpdateAPIView):
 
         comment = super().get_object()
 
-        community_user = self.request.community_user
+        user = self.request.user
 
-        if comment.author_id != community_user.id:
+        if comment.author_id != user.id:
             raise PermissionDenied(
                 "You cannot edit this comment."
             )
@@ -458,6 +593,7 @@ class UpdateCommentView(UpdateAPIView):
         return comment  
 
 class DeleteCommentView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
 
@@ -467,7 +603,7 @@ class DeleteCommentView(APIView):
             is_deleted=False
         )
 
-        if comment.author_id != request.community_user.id:
+        if comment.author_id != request.user.id:
             raise PermissionDenied(
                 "You cannot delete this comment."
             )
@@ -488,6 +624,7 @@ class DeleteCommentView(APIView):
         )      
 
 class CreateCommentView(CreateAPIView):
+    permission_classes = [IsAuthenticated]
 
     serializer_class = CommentSerializer
 
@@ -518,7 +655,7 @@ class CreateCommentView(CreateAPIView):
                 )
 
         comment = serializer.save(
-            author=self.request.community_user,
+            author=self.request.user,
             post=post,
             parent=parent
         )
@@ -568,17 +705,13 @@ class CreateCommentView(CreateAPIView):
 
 
 class VoteView(APIView):
+    permission_classes = [IsAuthenticated]
 
     @transaction.atomic
     def post(self, request):
 
-        serializer = VoteRequestSerializer(
-            data=request.data
-        )
-
-        serializer.is_valid(
-            raise_exception=True
-        )
+        serializer = VoteRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
         data = serializer.validated_data
 
@@ -586,23 +719,21 @@ class VoteView(APIView):
         post_id = data.get("post_id")
         comment_id = data.get("comment_id")
 
-      
-
         if post_id:
 
             target = get_object_or_404(
                 Post,
                 public_id=post_id,
-                is_deleted=False
+                is_deleted=False,
             )
 
             vote_filter = {
-                "user": request.community_user,
-                "post": target
+                "user": request.user,
+                "post": target,
             }
 
             score_filter = {
-                "post": target
+                "post": target,
             }
 
         else:
@@ -610,71 +741,63 @@ class VoteView(APIView):
             target = get_object_or_404(
                 Comment,
                 pk=comment_id,
-                is_deleted=False
+                is_deleted=False,
             )
 
             vote_filter = {
-                "user": request.community_user,
-                "comment": target
+                "user": request.user,
+                "comment": target,
             }
 
             score_filter = {
-                "comment": target
+                "comment": target,
             }
 
         if value == 0:
 
-            Vote.objects.filter(
-                **vote_filter
-            ).delete()
-
+            Vote.objects.filter(**vote_filter).delete()
             status_text = "removed"
 
         else:
 
             Vote.objects.update_or_create(
                 defaults={
-                    "value": value
+                    "value": value,
                 },
-                **vote_filter
+                **vote_filter,
             )
 
             status_text = "ok"
 
-
-        score = (
+        vote_stats = (
             Vote.objects
-            .filter(
-                **score_filter
-            )
+            .filter(**score_filter)
             .aggregate(
-                total=Coalesce(
+                vote_score=Coalesce(
                     Sum("value"),
                     Value(0),
-                    output_field=IntegerField()
-                )
-            )["total"]
+                    output_field=IntegerField(),
+                ),
+                upvote_count=Count(
+                    "id",
+                    filter=Q(value=Vote.UPVOTE),
+                ),
+                downvote_count=Count(
+                    "id",
+                    filter=Q(value=Vote.DOWNVOTE),
+                ),
+            )
         )
-
 
         return Response({
             "status": status_text,
             "user_vote": value,
-            "vote_score": score
+            **vote_stats,
         })
     
-class CommunityMeView(APIView):
 
-    def get(self, request):
-
-        serializer = CommunityUserSerializer(
-            request.community_user
-        )
-
-        return Response(
-            serializer.data
-        )    
 class NotificationListView(ListAPIView):
+    permission_classes = [IsAuthenticated]
 
     serializer_class = NotificationSerializer
     pagination_class = NotificationPagination
@@ -684,23 +807,25 @@ class NotificationListView(ListAPIView):
         return (
             Notification.objects
             .filter(
-                recipient=self.request.community_user
+                recipient=self.request.user
             )
             .select_related(
                 "actor",
+                "actor__profile",
                 "post",
                 "comment"
             )
         )
     
 class NotificationUnreadCountView(APIView):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
 
         count = (
             Notification.objects
             .filter(
-                recipient=request.community_user,
+                recipient=request.user,
                 is_read=False
             )
             .count()
@@ -711,7 +836,8 @@ class NotificationUnreadCountView(APIView):
         })
 
 class MarkNotificationReadView(APIView):
-
+    permission_classes = [IsAuthenticated]
+    
     def post(
         self,
         request,
@@ -721,7 +847,7 @@ class MarkNotificationReadView(APIView):
         notification = get_object_or_404(
             Notification,
             id=notification_id,
-            recipient=request.community_user
+            recipient=request.user
         )
 
         if not notification.is_read:
@@ -740,12 +866,14 @@ class MarkAllNotificationsReadView(
     APIView
 ):
 
+    permission_classes = [IsAuthenticated]
+
     def post(self, request):
 
         updated = (
             Notification.objects
             .filter(
-                recipient=request.community_user,
+                recipient=request.user,
                 is_read=False
             )
             .update(
@@ -761,13 +889,14 @@ class MarkAllNotificationsReadView(
 class DeleteNotificationView(
     DestroyAPIView
 ):
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
 
         return (
             Notification.objects
             .filter(
-                recipient=self.request.community_user
+                recipient=self.request.user
             )
         )       
 

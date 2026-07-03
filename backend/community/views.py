@@ -182,8 +182,8 @@ class PostFeedView(ListAPIView):
                 "is_admin_post",
                 "is_pinned",
                 "created_at",
-
-                "author__profile__display_name",
+                "author",
+                "author__profile__public_name",
                 "author__profile__avatar",
                 "author__profile__is_verified",
             )
@@ -405,8 +405,8 @@ class PostDetailView(RetrieveAPIView):
                 "created_at",
                 "updated_at",
 
-                "author__uuid",
-                "author__profile__display_name",
+                
+                "author__profile__public_name",
                 "author__profile__avatar",
                 "author__profile__is_verified",
             )
@@ -509,6 +509,11 @@ class CommentListView(ListAPIView):
             )
 
             is_author_annotation = Value(
+                False,
+                output_field=BooleanField()
+            )
+
+            is_post_creator_annotation = Value(
                 False,
                 output_field=BooleanField()
             )

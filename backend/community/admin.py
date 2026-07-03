@@ -17,7 +17,7 @@ class ProfileAdmin(admin.ModelAdmin):
 
     list_display = (
         "user",
-        "display_name",
+        "public_name",
         "is_verified",
         "created_at",
     )
@@ -28,7 +28,7 @@ class ProfileAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        "display_name",
+        "public_name",
         "user__username",
         "user__email",
     )
@@ -53,7 +53,7 @@ class ProfileAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "user",
-                    "display_name",
+                    "public_name",
                     "bio",
                     "avatar",
                     "is_verified",
@@ -108,7 +108,7 @@ class PostAdmin(admin.ModelAdmin):
     search_fields = (
         "content",
         "author__username",
-        "author__profile__display_name",
+        "author__profile__public_name",
     )
 
     ordering = (
@@ -222,7 +222,7 @@ class CommentAdmin(admin.ModelAdmin):
     search_fields = (
         "content",
         "author__username",
-        "author__profile__display_name",
+        "author__profile__public_name",
     )
 
     ordering = (
@@ -318,7 +318,7 @@ class VoteAdmin(admin.ModelAdmin):
 
     search_fields = (
         "user__username",
-        "user__profile__display_name",
+        "user__profile__public_name",
     )
 
     ordering = (
@@ -361,9 +361,9 @@ class NotificationAdmin(admin.ModelAdmin):
 
     search_fields = (
         "recipient__username",
-        "recipient__profile__display_name",
+        "recipient__profile__public_name",
         "actor__username",
-        "actor__profile__display_name",
+        "actor__profile__public_name",
     )
 
     ordering = (

@@ -12,10 +12,11 @@ class Profile(models.Model):
         related_name="profile"
     )
 
-    display_name = models.CharField(
-    max_length=50,
-    default="ምእመን"
-)
+    public_name = models.CharField(
+        max_length=50,
+        default="ምእመን",
+        db_index=True,
+    )
 
     bio = models.TextField(
         blank=True,
@@ -39,7 +40,7 @@ class Profile(models.Model):
     )
 
     def __str__(self):
-        return self.display_name
+        return self.public_name
 class Post(models.Model):
     public_id = models.BigAutoField(
         primary_key=True

@@ -1,12 +1,11 @@
 from rest_framework import serializers
-from django.utils.timesince import timesince
 from .models import  Post, Comment, Vote, Notification, Profile
 
 class ProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = [
-            "display_name",
+            "public_name",
             "avatar",
             "bio",
             "is_verified",
@@ -23,12 +22,14 @@ class PostFeedSerializer(serializers.ModelSerializer):
     )
     """
     author_name = serializers.CharField(
-        source="author.profile.display_name",
+        source="author.profile.public_name",
         read_only=True
     )
     author_avatar = serializers.CharField(
         source="author.profile.avatar",
-        read_only=True
+        read_only=True,
+        allow_blank=True,
+        default=""
     )
     # These come from queryset annotation in the view
     comment_count = serializers.IntegerField(read_only=True, default=0)
@@ -163,7 +164,7 @@ class CommentSerializer(serializers.ModelSerializer):
     avoids recursive DB queries.
     """
     author_name = serializers.CharField(
-        source="author.profile.display_name",
+        source="author.profile.public_name",
         read_only=True
     )
     author_avatar = serializers.CharField(
@@ -280,26 +281,28 @@ class NotificationSerializer(serializers.ModelSerializer):
     navigate directly to the right content on tap.
     """
     actor_name = serializers.CharField(
-        source="actor.profile.display_name",
-        read_only=True
+        source="actor.profile.public_name",
+        read_only=True,
     )
+
     actor_avatar = serializers.CharField(
         source="actor.profile.avatar",
-        read_only=True
+        read_only=True,
     )
-    # Navigation targets
+
     post_id = serializers.IntegerField(
         source="post.public_id",
         read_only=True,
-        allow_null=True
+        allow_null=True,
     )
+
     comment_id = serializers.IntegerField(
         source="comment.id",
         read_only=True,
-        allow_null=True
+        allow_null=True,
     )
+
     message = serializers.SerializerMethodField()
-   
 
     class Meta:
         model = Notification
@@ -317,15 +320,12 @@ class NotificationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_message(self, obj):
-        name = (
-              obj.actor.profile.display_name
-              if obj.actor
-              else "Someone"
-)
-        return {
-            "comment_on_post":    f"{name} commented on your post",
-            "reply_on_comment":   f"{name} replied to your comment",
-            "admin_announcement": "New announcement from Mekwerab",
-        }.get(obj.notification_type, "New notification")
+        name = obj.actor.username if obj.actor else "Someone"
 
-   
+        messages = {
+            "comment_on_post": f"{name} commented on your post",
+            "reply_on_comment": f"{name} replied to your comment",
+            "admin_announcement": "New announcement from Mekwerab",
+        }
+
+        return messages.get(obj.notification_type, "New notification")

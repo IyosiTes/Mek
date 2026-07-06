@@ -144,9 +144,8 @@ class PostFeedView(ListAPIView):
                 is_deleted=False
             )
             .select_related(
-                "author",
-                "author__profile",
-            )
+                "author", 
+                  )
             .annotate(
                 comment_count=Coalesce(
                     Subquery(comment_count_subquery),
@@ -182,10 +181,8 @@ class PostFeedView(ListAPIView):
                 "is_admin_post",
                 "is_pinned",
                 "created_at",
-                "author",
-                "author__profile__public_name",
-                "author__profile__avatar",
-                "author__profile__is_verified",
+                "author_id",
+               
             )
             .order_by(
                 "-is_pinned",
@@ -363,7 +360,6 @@ class PostDetailView(RetrieveAPIView):
             )
             .select_related(
                 "author",
-                "author__profile",
             )
             .annotate(
                 comment_count=Coalesce(
@@ -397,18 +393,13 @@ class PostDetailView(RetrieveAPIView):
             )
             .only(
                 "public_id",
+                "author_id",
                 "content",
                 "image_url",
                 "is_admin_post",
                 "is_pinned",
-               # "is_deleted",
                 "created_at",
-                "updated_at",
-
-                
-                "author__profile__public_name",
-                "author__profile__avatar",
-                "author__profile__is_verified",
+                "updated_at",  
             )
         )
 class CommentListView(ListAPIView):
@@ -525,7 +516,8 @@ class CommentListView(ListAPIView):
             )
             .select_related(
                 "author",
-                "author__profile",
+                "parent",
+                "post"
             )
             .annotate(
                 vote_score=Coalesce(
@@ -650,7 +642,7 @@ class CreateCommentView(CreateAPIView):
 
         if parent:
 
-            if parent.post_id != post.public_id:
+            if parent.post != post:
                 raise serializer.ValidationError(
                     "Parent comment must belong to the same post."
                 )
@@ -816,7 +808,6 @@ class NotificationListView(ListAPIView):
             )
             .select_related(
                 "actor",
-                "actor__profile",
                 "post",
                 "comment"
             )

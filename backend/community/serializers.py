@@ -1,16 +1,16 @@
 from rest_framework import serializers
-from .models import  Post, Comment, Vote, Notification, Profile
+from .models import  Post, Comment, UserProfile, Vote, Notification
 
-class ProfileSerializer(serializers.ModelSerializer):
+
+class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Profile
+        model = UserProfile
         fields = [
-            "public_name",
+            "display_name",
             "avatar",
             "bio",
             "is_verified",
-        ]
-        read_only_fields = fields
+        ]        
 class PostFeedSerializer(serializers.ModelSerializer):
     """
     Used in the main feed list — lightweight, no comments.
@@ -21,20 +21,14 @@ class PostFeedSerializer(serializers.ModelSerializer):
         vote_score=Coalesce(Sum("votes__value"), 0)
     )
     """
-    author_name = serializers.CharField(
-        source="author.profile.public_name",
-        read_only=True
-    )
-    author_avatar = serializers.CharField(
-        source="author.profile.avatar",
-        read_only=True,
-        allow_blank=True,
-        default=""
-    )
+    author_name = serializers.SerializerMethodField()
+
     # These come from queryset annotation in the view
     comment_count = serializers.IntegerField(read_only=True, default=0)
+
     upvote_count = serializers.IntegerField(read_only=True, default=0)
     downvote_count = serializers.IntegerField(read_only=True, default=0)
+
     vote_score = serializers.IntegerField(read_only=True, default=0)
     
     user_vote = serializers.IntegerField(
@@ -43,14 +37,11 @@ class PostFeedSerializer(serializers.ModelSerializer):
     )
     is_author = serializers.BooleanField(read_only=True)
    
-   
-
     class Meta:
         model = Post
         fields = [
             "public_id",
             "author_name",
-            "author_avatar",
             "content",
             "image_url",
             "is_admin_post",
@@ -63,6 +54,9 @@ class PostFeedSerializer(serializers.ModelSerializer):
             "user_vote",
             "created_at",
         ]
+
+    def get_author_name(self, obj):
+     return "ምእመን"    
 
    
 class PostCreateSerializer(serializers.ModelSerializer):
@@ -103,14 +97,15 @@ class PostDetailSerializer(serializers.ModelSerializer):
     Never load comments inside post serializer —
     a post can have 10,000 comments, that would kill your server.
     """
-    author = ProfileSerializer(
-    source="author.profile",
-    read_only=True
-)  
+    author_name = serializers.SerializerMethodField()
+  
     upvote_count = serializers.IntegerField(read_only=True, default=0)
     downvote_count = serializers.IntegerField(read_only=True, default=0)
+
     vote_score = serializers.IntegerField(read_only=True, default=0)
+
     comment_count = serializers.IntegerField(read_only=True, default=0)
+
     user_vote = serializers.IntegerField(
     read_only=True,
     default=0
@@ -121,7 +116,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
         model = Post
         fields = [
             "public_id",
-            "author",
+            "author_name",
             "content",
             "image_url",
             "is_admin_post",
@@ -137,7 +132,8 @@ class PostDetailSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
 
-   
+    def get_author_name(self, obj):
+     return "ምእመን"
 
     def get_is_author(self, obj):
      request = self.context.get("request")
@@ -147,6 +143,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
         or not request.user.is_authenticated
     ):
         return False
+     
 
      return obj.author_id == request.user.id
 
@@ -163,14 +160,8 @@ class CommentSerializer(serializers.ModelSerializer):
     This is how Reddit, Telegram, Instagram all do it —
     avoids recursive DB queries.
     """
-    author_name = serializers.CharField(
-        source="author.profile.public_name",
-        read_only=True
-    )
-    author_avatar = serializers.CharField(
-        source="author.profile.avatar",
-        read_only=True
-    )
+    author_name = serializers.SerializerMethodField()
+ 
     post = serializers.IntegerField(
     source="post_id",
     read_only=True
@@ -212,7 +203,6 @@ class CommentSerializer(serializers.ModelSerializer):
             "parent",       #null for top-level comments, else parent comment ID
             "is_post_creator",
             "author_name",
-            "author_avatar",
             "upvote_count",
             "downvote_count",
             "vote_score",
@@ -225,6 +215,9 @@ class CommentSerializer(serializers.ModelSerializer):
         read_only_fields = [
             "id", "post", "is_deleted", "created_at"
         ]
+
+    def get_author_name(self, obj):
+        return "ምእመን"
 
     def validate_content(self, value):
         value = value.strip()
@@ -280,16 +273,7 @@ class NotificationSerializer(serializers.ModelSerializer):
     Includes post_id and comment_id so frontend can
     navigate directly to the right content on tap.
     """
-    actor_name = serializers.CharField(
-        source="actor.profile.public_name",
-        read_only=True,
-    )
-
-    actor_avatar = serializers.CharField(
-        source="actor.profile.avatar",
-        read_only=True,
-    )
-
+    
     post_id = serializers.IntegerField(
         source="post.public_id",
         read_only=True,
@@ -320,12 +304,20 @@ class NotificationSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
     def get_message(self, obj):
-        name = obj.actor.username if obj.actor else "Someone"
+       
 
         messages = {
-            "comment_on_post": f"{name} commented on your post",
-            "reply_on_comment": f"{name} replied to your comment",
-            "admin_announcement": "New announcement from Mekwerab",
-        }
+             Notification.COMMENT_ON_POST:
+                  "Someone commented on your post.",
 
-        return messages.get(obj.notification_type, "New notification")
+             Notification.REPLY_ON_COMMENT:
+                  "Someone replied to your comment.",
+
+             Notification.ADMIN_ANNOUNCEMENT:
+                "New announcement from Mekwerab.",
+            }
+
+        return messages.get(
+                obj.notification_type,
+               "New notification.",
+           )

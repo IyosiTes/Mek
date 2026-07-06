@@ -4,43 +4,41 @@ from django.db.models import Q
 from django.core.validators import MaxLengthValidator
 
 # Create your models here.
-class Profile(models.Model):
+
+class UserProfile(models.Model):
 
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
-        related_name="profile"
+        related_name="profile",
     )
 
-    public_name = models.CharField(
+    display_name = models.CharField(
         max_length=50,
-        default="ምእመን",
-        db_index=True,
+        blank=True,
+        default="",
+    )
+
+    avatar = models.URLField(
+        blank=True,
     )
 
     bio = models.TextField(
         blank=True,
-        default=""
-    )
-
-    avatar = models.URLField(
-        blank=True
     )
 
     is_verified = models.BooleanField(
-        default=False
+        default=False,
     )
 
     created_at = models.DateTimeField(
-        auto_now_add=True
+        auto_now_add=True,
     )
 
     updated_at = models.DateTimeField(
-        auto_now=True
-    )
+        auto_now=True,
+    )    
 
-    def __str__(self):
-        return self.public_name
 class Post(models.Model):
     public_id = models.BigAutoField(
         primary_key=True

@@ -9,9 +9,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             "username",
-            "phone_number",
             "email",
-            "address",
             "password",
             "password_confirm",
         ]
@@ -19,35 +17,36 @@ class RegisterSerializer(serializers.ModelSerializer):
             "password": {"write_only": True}
         }
 
-    def validate(self, data):
-        if data["password"] != data["password_confirm"]:
+    def validate(self, attrs):
+        if attrs["password"] != attrs["password_confirm"]:
             raise serializers.ValidationError("Passwords do not match")
 
-        return data
+        return attrs
 
     def create(self, validated_data):
         validated_data.pop("password_confirm")
 
-        user = User.objects.create_user(
+        return User.objects.create_user(
             username=validated_data["username"],
-            phone_number=validated_data.get("phone_number"),
             email=validated_data["email"],
-            address=validated_data.get("address"),
             password=validated_data["password"],
         )
 
-        return user
     
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User;
         fields = [
+            "id",
             "username",
-            "phone_number",
-            "address",
             "email",
+            "is_vendor",
         ]
-        read_only_fields = ["username"]
+        read_only_fields = [ "id",
+            "username",
+            "email",
+            "is_vendor",
+            ]
 
 class CommunityRegisterSerializer(serializers.ModelSerializer):
     password_confirm = serializers.CharField(write_only=True)

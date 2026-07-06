@@ -1,23 +1,22 @@
 from django.contrib import admin
 from .models import (
-    Profile,
+    UserProfile,
     Post,
     Comment,
     Vote,
     Notification,
 )
 
-
 # ==========================================================
 # Profile
 # ==========================================================
 
-@admin.register(Profile)
-class ProfileAdmin(admin.ModelAdmin):
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
 
     list_display = (
         "user",
-        "public_name",
+        "display_name",
         "is_verified",
         "created_at",
     )
@@ -28,7 +27,7 @@ class ProfileAdmin(admin.ModelAdmin):
     )
 
     search_fields = (
-        "public_name",
+        "display_name",
         "user__username",
         "user__email",
     )
@@ -53,7 +52,7 @@ class ProfileAdmin(admin.ModelAdmin):
             {
                 "fields": (
                     "user",
-                    "public_name",
+                    "display_name",
                     "bio",
                     "avatar",
                     "is_verified",
@@ -108,7 +107,7 @@ class PostAdmin(admin.ModelAdmin):
     search_fields = (
         "content",
         "author__username",
-        "author__profile__public_name",
+        "author__email",
     )
 
     ordering = (
@@ -222,7 +221,7 @@ class CommentAdmin(admin.ModelAdmin):
     search_fields = (
         "content",
         "author__username",
-        "author__profile__public_name",
+        "author__profile__display_name",
     )
 
     ordering = (
@@ -318,7 +317,7 @@ class VoteAdmin(admin.ModelAdmin):
 
     search_fields = (
         "user__username",
-        "user__profile__public_name",
+        "user__profile__display_name",
     )
 
     ordering = (

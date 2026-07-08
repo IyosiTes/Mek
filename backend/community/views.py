@@ -563,7 +563,7 @@ class CommentListView(ListAPIView):
                     output_field=CharField()
                 )
             )
-            .order_by("-created_at")
+            .order_by("created_at")
         )
        
 class UpdateCommentView(UpdateAPIView):

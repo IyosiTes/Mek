@@ -293,8 +293,6 @@ class NotificationSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "notification_type",
-            "actor_name",
-            "actor_avatar",
             "message",
             "post_id",
             "comment_id",
